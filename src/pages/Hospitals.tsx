@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Guitar as Hospital, Navigation } from 'lucide-react';
+import { Guitar as Hospital } from 'lucide-react';
 
 interface PatientInfo {
   age: string;

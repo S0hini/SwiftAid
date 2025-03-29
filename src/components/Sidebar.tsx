@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { NavLink } from 'react-router-dom';
 import { MapPin, Guitar as Hospital, Briefcase, UserCircle, LogOut } from 'lucide-react';
 import { auth } from '../lib/firebase';

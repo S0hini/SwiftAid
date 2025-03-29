@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { UserCircle, Mail, MapPin, CreditCard } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 

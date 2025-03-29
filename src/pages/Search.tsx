@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { GoogleMap, LoadScript, TrafficLayer } from '@react-google-maps/api';
 import { MapPin, Navigation } from 'lucide-react';
 
