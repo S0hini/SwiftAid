@@ -1,91 +1,138 @@
-import { useState, useCallback } from 'react';
-import { GoogleMap, LoadScript, TrafficLayer } from '@react-google-maps/api';
-import { MapPin, Navigation } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { 
+  LoadScript, 
+  GoogleMap, 
+  Marker, 
+  DirectionsService, 
+  DirectionsRenderer 
+} from "@react-google-maps/api";
 
-const containerStyle = {
-  width: '100%',
-  height: '600px'
-};
+const libraries: ("places")[] = ["places"];
 
-const center = {
-  lat: 34.04924594193164,
-  lng: -118.24104309082031
-};
+const Search: React.FC = () => {
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [destination, setDestination] = useState("");
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
 
-export default function Search() {
-  const [destination, setDestination] = useState('');
-  const [currentLocation, setCurrentLocation] = useState<GeolocationPosition | null>(null);
-
-  const handleGetCurrentLocation = () => {
-    if (navigator.geolocation) {
+  // Function to Get User's Current Location (Browser API)
+  const getCurrentLocation = () => {
+    if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => setCurrentLocation(position),
-        (error) => console.error('Error getting location:', error)
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setCurrentLocation({ lat, lng });
+          console.log("Accurate Location:", lat, lng);
+        },
+        (error) => {
+          console.error("Error fetching location:", error);
+          alert("Geolocation permission denied. Trying Google API...");
+          fetchGoogleLocation(); // Fallback to Google API
+        },
+        {
+          enableHighAccuracy: true, // Ensures GPS precision
+          timeout: 10000, // Wait max 10 seconds
+          maximumAge: 0, // No cached location
+        }
       );
     } else {
-      console.error('Geolocation is not supported by this browser.');
+      alert("Geolocation is not supported by your browser.");
     }
   };
 
-  const handleOpenGoogleMaps = () => {
-    if (!destination) return;
-    
-    const origin = currentLocation 
-      ? `${currentLocation.coords.latitude},${currentLocation.coords.longitude}`
-      : '';
-    
-    const url = `https://www.google.com/maps/dir/${origin}/${encodeURIComponent(destination)}`;
-    window.open(url, '_blank');
+  // Function to Fetch More Accurate Location from Google Geolocation API
+  const fetchGoogleLocation = async () => {
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/geolocation/v1/geolocate?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
+        {
+          method: "POST",
+        }
+      );
+      const data = await response.json();
+      if (data.location) {
+        setCurrentLocation({
+          lat: data.location.lat,
+          lng: data.location.lng,
+        });
+        console.log("Google Geolocation:", data.location.lat, data.location.lng);
+      }
+    } catch (error) {
+      console.error("Error fetching location from Google API:", error);
+    }
   };
 
-  const onLoad = useCallback((map: google.maps.Map) => {
-    const bounds = new window.google.maps.LatLngBounds(center);
-    map.fitBounds(bounds);
+  // Automatically fetch location on component mount
+  useEffect(() => {
+    getCurrentLocation();
   }, []);
 
+  // Function to Calculate Route
+  const getDirections = () => {
+    if (!currentLocation) {
+      alert("Please allow location access first.");
+      return;
+    }
+    if (!destination) {
+      alert("Please enter a destination.");
+      return;
+    }
+
+    const directionsService = new google.maps.DirectionsService();
+
+    directionsService.route(
+      {
+        origin: currentLocation,
+        destination: destination,
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK) {
+          setDirections(result);
+        } else {
+          alert("Error fetching directions. Check the destination.");
+          console.error("Directions request failed:", status);
+        }
+      }
+    );
+  };
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Search Destination</h1>
-      
-      <div className="mb-6 flex gap-4">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Enter destination"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        
+    <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={libraries}>
+      <div>
+        <h2 className="text-xl font-bold">Search Destination</h2>
+        <input
+          type="text"
+          value={destination}
+          onChange={(e) => setDestination(e.target.value)}
+          placeholder="Enter destination"
+          className="border p-2 w-full mt-2"
+        />
         <button
-          onClick={handleGetCurrentLocation}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+          onClick={getCurrentLocation}
+          className="bg-blue-500 text-white px-4 py-2 mt-2 rounded"
         >
-          <MapPin className="w-5 h-5" />
-          Get Current Location
+          Use My Location
         </button>
-        
         <button
-          onClick={handleOpenGoogleMaps}
-          disabled={!destination}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+          onClick={getDirections}
+          className="bg-green-500 text-white px-4 py-2 mt-2 ml-2 rounded"
         >
-          <Navigation className="w-5 h-5" />
           Get Directions
         </button>
-      </div>
 
-      <LoadScript googleMapsApiKey="AlzaSyChubci7qnbkrgvZBtvEwH4DJP1Op8ehaU">
+        {/* Google Map */}
         <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={center}
-          zoom={10}
-          onLoad={onLoad}
+          center={currentLocation || { lat: 22.5726, lng: 88.3639 }} // Default to Kolkata if no location
+          zoom={14}
+          mapContainerStyle={{ width: "100%", height: "400px", marginTop: "20px" }}
         >
-          <TrafficLayer />
+          {currentLocation && <Marker position={currentLocation} label="You" />}
+          {directions && <DirectionsRenderer directions={directions} />}
         </GoogleMap>
-      </LoadScript>
-    </div>
+      </div>
+    </LoadScript>
   );
-}
+};
+
+export default Search;
