@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nearest Hospital Finder with Directions</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyATvfQlOa7OKmo4A7ZypSQXITjFOA3gRRo&libraries=places"></script>
+    <script>
+        let map, directionsService, directionsRenderer;
+
+        function initMap() {
+            // User's location (example coordinates)
+            const userLocation = { lat: 22.6837, lng: 88.4820 };
+
+            // Hospital locations (example data)
+            const hospitals = [
+                { name: "Hospital A", location: { lat: 22.6711, lng: 88.4767 } },
+                { name: "Hospital B", location: { lat: 22.7001, lng: 88.4705 } },
+                { name: "Hospital C", location: { lat: 22.6803, lng: 88.4851 } },
+            ];
+
+            // Initialize map
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: userLocation,
+                zoom: 14,
+            });
+
+            // Add user's location marker
+            new google.maps.Marker({
+                position: userLocation,
+                map: map,
+                title: "You are here",
+            });
+
+            // Add hospital markers
+            hospitals.forEach(hospital => {
+                const marker = new google.maps.Marker({
+                    position: hospital.location,
+                    map: map,
+                    title: hospital.name,
+                });
+
+                // Display hospital name on click
+                google.maps.event.addListener(marker, 'click', () => {
+                    displayDirections(userLocation, hospital.location, hospital.name);
+                });
+            });
+
+            // Initialize directions service and renderer
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+        }
+
+        function displayDirections(userLocation, hospitalLocation, hospitalName) {
+            const request = {
+                origin: userLocation,
+                destination: hospitalLocation,
+                travelMode: google.maps.TravelMode.DRIVING,
+            };
+
+            directionsService.route(request, (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK) {
+                    directionsRenderer.setDirections(result);
+                    const distance = result.routes[0].legs[0].distance.text;
+                    const duration = result.routes[0].legs[0].duration.text;
+                    alert(`Directions to ${hospitalName}:\nDistance: ${distance}\nDuration: ${duration}`);
+                } else {
+                    alert("Unable to fetch directions: " + status);
+                }
+            });
+        }
+    </script>
+</head>
+<body onload="initMap()">
+    <h1>Nearest Hospital Finder</h1>
+    <div id="map" style="width: 100%; height: 500px;"></div>
+</body>
+</html>
